@@ -53,6 +53,10 @@ MISTRAL_MODEL=mistral-small-latest
 
 Render injects a `PORT` environment variable at runtime; the server reads it automatically. citeturn0search6
 
+### One-click Render
+This repo includes a `render.yaml`, so you can also use Render Blueprint deploy:
+- It sets the build/start commands, health check, and env var placeholders.
+
 ## Notes
 - `.env` is ignored by git (see `.gitignore`).
 - The app relies on the YouTube transcript availability for English.
