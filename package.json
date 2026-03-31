@@ -1,0 +1,17 @@
+{
+  "name": "unni-ai-notes",
+  "version": "1.0.0",
+  "description": "Generate expert study notes from YouTube videos with Mistral AI.",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "youtube-transcript": "^1.1.0"
+  }
+}

@@ -1,0 +1,767 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Unni AI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --primary: #0048e1;
+      --primary-container: #3063ff;
+      --secondary-container: #6cf8bb;
+      --on-secondary-container: #00714d;
+      --surface: #faf8ff;
+      --surface-container-low: #f2f3ff;
+      --surface-container-lowest: #ffffff;
+      --surface-container-highest: #e9ecff;
+      --surface-dim: #d2d9f4;
+      --surface-bright: rgba(250, 248, 255, 0.7);
+      --on-surface: #131b2e;
+      --on-surface-variant: #424656;
+      --outline-ghost: rgba(194, 198, 216, 0.15);
+      --shadow-ambient: rgba(19, 27, 46, 0.06);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      height: 100%;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Inter", sans-serif;
+      color: var(--on-surface);
+      background: radial-gradient(1200px 600px at 15% 15%, rgba(48, 99, 255, 0.14), transparent 60%),
+        radial-gradient(900px 500px at 85% 20%, rgba(108, 248, 187, 0.2), transparent 55%),
+        linear-gradient(180deg, #f6f7ff 0%, #ffffff 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 20px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    body.results-visible {
+      overflow: auto;
+      align-items: flex-start;
+      padding-top: 48px;
+    }
+
+    .ambient {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    #stitch-canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0.7;
+      filter: blur(0.2px);
+    }
+
+    .orb {
+      position: absolute;
+      border-radius: 999px;
+      mix-blend-mode: screen;
+      opacity: 0.9;
+      transform: translateZ(0);
+      transition: transform 0.2s ease;
+    }
+
+    .orb.one {
+      width: 320px;
+      height: 320px;
+      left: -80px;
+      top: 10%;
+      background: radial-gradient(circle at 30% 30%, rgba(48, 99, 255, 0.4), rgba(48, 99, 255, 0.05) 70%);
+    }
+
+    .orb.two {
+      width: 260px;
+      height: 260px;
+      right: -60px;
+      top: 55%;
+      background: radial-gradient(circle at 40% 40%, rgba(108, 248, 187, 0.45), rgba(108, 248, 187, 0.06) 70%);
+    }
+
+    .orb.three {
+      width: 180px;
+      height: 180px;
+      left: 65%;
+      top: -40px;
+      background: radial-gradient(circle at 30% 30%, rgba(0, 72, 225, 0.25), rgba(0, 72, 225, 0.02) 70%);
+    }
+
+    .ribbon {
+      position: absolute;
+      right: 12%;
+      bottom: 16%;
+      width: 220px;
+      height: 140px;
+      opacity: 0.5;
+      filter: blur(0.3px);
+    }
+
+    .ribbon path {
+      stroke: rgba(48, 99, 255, 0.35);
+      stroke-width: 1.5;
+      fill: none;
+      stroke-linecap: round;
+      stroke-dasharray: 4 6;
+    }
+
+    .page {
+      width: min(880px, 100%);
+      text-align: center;
+      display: grid;
+      gap: 28px;
+      position: relative;
+      z-index: 2;
+    }
+
+    .brand {
+      font-family: "Manrope", sans-serif;
+      font-size: clamp(2.8rem, 4vw, 3.6rem);
+      letter-spacing: -0.02em;
+      margin: 0;
+      font-weight: 800;
+      color: var(--on-surface);
+    }
+
+    .brand span {
+      background: linear-gradient(120deg, var(--primary) 0%, var(--primary-container) 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+
+    .tagline {
+      margin: 6px 0 0;
+      font-size: 0.9rem;
+      color: var(--on-surface-variant);
+      letter-spacing: 0.01em;
+    }
+
+    .search-shell {
+      background: var(--surface-bright);
+      backdrop-filter: blur(20px);
+      border-radius: 18px;
+      padding: 18px;
+      box-shadow: 0 30px 70px var(--shadow-ambient);
+    }
+
+    .search-bar {
+      background: var(--surface-container-highest);
+      border-radius: 14px;
+      padding: 14px 18px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      align-items: center;
+      transition: background 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .search-bar:focus-within {
+      background: var(--surface-container-lowest);
+      box-shadow: 0 0 0 2px var(--outline-ghost);
+    }
+
+    .search-input {
+      border: none;
+      background: transparent;
+      font-size: 1.05rem;
+      font-family: "Inter", sans-serif;
+      color: var(--on-surface);
+      outline: none;
+    }
+
+    .search-input::placeholder {
+      color: var(--on-surface-variant);
+    }
+
+    .cta {
+      border: none;
+      cursor: pointer;
+      padding: 10px 18px;
+      border-radius: 12px;
+      font-family: "Inter", sans-serif;
+      font-size: 0.85rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #ffffff;
+      background: linear-gradient(120deg, var(--primary) 0%, var(--primary-container) 100%);
+      box-shadow: 0 16px 30px rgba(48, 99, 255, 0.2);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .cta:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 20px 40px rgba(48, 99, 255, 0.25);
+    }
+
+    .cta:active {
+      transform: translateY(0);
+    }
+
+    .result-shell {
+      background: var(--surface-container-lowest);
+      border-radius: 18px;
+      padding: 18px;
+      box-shadow: 0 18px 50px var(--shadow-ambient);
+      text-align: left;
+      display: grid;
+      gap: 12px;
+    }
+
+    .result-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      font-size: 0.9rem;
+      color: var(--on-surface-variant);
+    }
+
+    .result-status {
+      font-weight: 600;
+      color: var(--on-surface);
+    }
+
+    .notes-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .notes-title {
+      font-family: "Manrope", sans-serif;
+      font-size: 1.3rem;
+      margin: 0;
+      color: var(--on-surface);
+    }
+
+    .action-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .action-btn {
+      border: none;
+      cursor: pointer;
+      padding: 8px 14px;
+      border-radius: 999px;
+      font-family: "Inter", sans-serif;
+      font-size: 0.8rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--on-surface);
+      background: var(--surface-container-highest);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .action-btn.primary {
+      color: #ffffff;
+      background: linear-gradient(120deg, var(--primary) 0%, var(--primary-container) 100%);
+      box-shadow: 0 16px 30px rgba(48, 99, 255, 0.2);
+    }
+
+    .action-btn:hover {
+      transform: translateY(-1px);
+    }
+
+    .action-btn:disabled {
+      cursor: not-allowed;
+      opacity: 0.6;
+      box-shadow: none;
+      transform: none;
+    }
+
+    .notes-surface {
+      background: var(--surface-container-low);
+      border-radius: 16px;
+      padding: 14px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .notes-meta {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      color: var(--on-surface-variant);
+      font-size: 0.8rem;
+    }
+
+    .meta-chip {
+      background: var(--surface-container-highest);
+      border-radius: 999px;
+      padding: 4px 10px;
+    }
+
+    .result-output {
+      background: var(--surface-container-highest);
+      border-radius: 14px;
+      padding: 14px;
+      font-size: 0.95rem;
+      line-height: 1.6;
+      color: var(--on-surface);
+      max-height: 320px;
+      overflow: auto;
+    }
+
+    .result-output.empty {
+      color: var(--on-surface-variant);
+    }
+
+    .notes-content h2,
+    .notes-content h3,
+    .notes-content h4 {
+      font-family: "Manrope", sans-serif;
+      margin: 12px 0 6px;
+      color: var(--on-surface);
+    }
+
+    .notes-content h2 {
+      font-size: 1.1rem;
+    }
+
+    .notes-content h3 {
+      font-size: 1rem;
+    }
+
+    .notes-content h4 {
+      font-size: 0.95rem;
+    }
+
+    .notes-content p {
+      margin: 0 0 10px;
+      color: var(--on-surface);
+    }
+
+    .notes-content ul {
+      margin: 0 0 12px 18px;
+      padding: 0;
+    }
+
+    .notes-content li {
+      margin: 0 0 6px;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .orb {
+        transition: none;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .orb.one {
+        width: 220px;
+        height: 220px;
+        left: -60px;
+      }
+
+      .orb.two {
+        width: 200px;
+        height: 200px;
+      }
+
+      .search-bar {
+        grid-template-columns: 1fr;
+      }
+
+      .cta {
+        width: 100%;
+      }
+    }
+
+    @media print {
+      body {
+        background: #ffffff;
+      }
+
+      .ambient,
+      .search-shell,
+      .result-header,
+      .notes-toolbar,
+      .action-row {
+        display: none !important;
+      }
+
+      .result-shell {
+        box-shadow: none;
+        padding: 0;
+      }
+
+      .result-output {
+        max-height: none;
+        overflow: visible;
+        background: #ffffff;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="ambient" aria-hidden="true">
+    <canvas id="stitch-canvas"></canvas>
+    <div class="orb one"></div>
+    <div class="orb two"></div>
+    <div class="orb three"></div>
+    <svg class="ribbon" viewBox="0 0 220 140" aria-hidden="true">
+      <path d="M10 30 C 60 10, 140 15, 210 50" />
+      <path d="M5 80 C 70 110, 150 120, 215 90" />
+    </svg>
+  </div>
+  <main class="page">
+    <header>
+      <h1 class="brand">Unni <span>AI</span></h1>
+      <p class="tagline">Turn any YouTube video into study-ready expert notes.</p>
+    </header>
+
+    <section class="search-shell">
+      <form class="search-bar" action="#" aria-label="Unni AI link input">
+        <input
+          class="search-input"
+          type="url"
+          name="link"
+          placeholder="Paste your YouTube link here"
+          autocomplete="off"
+          spellcheck="false"
+          aria-label="YouTube link"
+          required
+        />
+        <button class="cta" type="submit">Generate Notes</button>
+      </form>
+    </section>
+
+    <section class="result-shell" aria-live="polite">
+      <div class="result-header">
+        <span>AI Expert Notes</span>
+        <span class="result-status" id="status">Waiting for a link.</span>
+      </div>
+      <div class="notes-toolbar">
+        <h2 class="notes-title">Notes Canvas</h2>
+        <div class="action-row">
+          <button class="action-btn" type="button" id="export-word" disabled>Export Word</button>
+          <button class="action-btn primary" type="button" id="export-pdf" disabled>Export PDF</button>
+        </div>
+      </div>
+      <div class="notes-surface">
+        <div class="notes-meta">
+          <span class="meta-chip" id="word-count">Words: 0</span>
+          <span class="meta-chip">Expert mode</span>
+          <span class="meta-chip">Study ready</span>
+        </div>
+        <div class="result-output empty notes-content" id="output">Paste a YouTube link and click Generate Notes to create expert notes.</div>
+      </div>
+    </section>
+  </main>
+  <script>
+    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const canvas = document.getElementById("stitch-canvas");
+    const ctx = canvas.getContext("2d");
+    const DPR = Math.min(window.devicePixelRatio || 1, 2);
+    const points = [];
+    let pointer = { x: 0, y: 0 };
+
+    const resizeCanvas = () => {
+      const { innerWidth, innerHeight } = window;
+      canvas.width = innerWidth * DPR;
+      canvas.height = innerHeight * DPR;
+      ctx.scale(DPR, DPR);
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+      buildGrid();
+      render();
+    };
+
+    const buildGrid = () => {
+      points.length = 0;
+      const cols = 12;
+      const rows = 7;
+      for (let y = 0; y < rows; y += 1) {
+        for (let x = 0; x < cols; x += 1) {
+          const nx = x / (cols - 1);
+          const ny = y / (rows - 1);
+          points.push({
+            x: nx,
+            y: ny,
+            depth: 0.2 + Math.random() * 0.8,
+          });
+        }
+      }
+    };
+
+    const render = () => {
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      ctx.clearRect(0, 0, width, height);
+      ctx.lineWidth = 1;
+      ctx.setLineDash([4, 6]);
+      ctx.strokeStyle = "rgba(48, 99, 255, 0.15)";
+      ctx.fillStyle = "rgba(19, 27, 46, 0.08)";
+      const cols = 12;
+
+      for (let i = 0; i < points.length; i += 1) {
+        const p = points[i];
+        const offsetX = pointer.x * 40 * p.depth;
+        const offsetY = pointer.y * 30 * p.depth;
+        const px = p.x * width + offsetX;
+        const py = p.y * height + offsetY;
+
+        if (i % cols !== cols - 1) {
+          const next = points[i + 1];
+          const nx = next.x * width + pointer.x * 40 * next.depth;
+          const ny = next.y * height + pointer.y * 30 * next.depth;
+          ctx.beginPath();
+          ctx.moveTo(px, py);
+          ctx.lineTo(nx, ny);
+          ctx.stroke();
+        }
+
+        if (i + cols < points.length) {
+          const down = points[i + cols];
+          const dx = down.x * width + pointer.x * 40 * down.depth;
+          const dy = down.y * height + pointer.y * 30 * down.depth;
+          ctx.beginPath();
+          ctx.moveTo(px, py);
+          ctx.lineTo(dx, dy);
+          ctx.stroke();
+        }
+
+        ctx.beginPath();
+        ctx.arc(px, py, 1.6, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    };
+
+    const animate = () => {
+      if (prefersReducedMotion) {
+        render();
+        return;
+      }
+      render();
+      requestAnimationFrame(animate);
+    };
+
+    window.addEventListener("mousemove", (event) => {
+      pointer.x = (event.clientX / window.innerWidth - 0.5) * 2;
+      pointer.y = (event.clientY / window.innerHeight - 0.5) * 2;
+      const orbs = document.querySelectorAll(".orb");
+      orbs.forEach((orb, index) => {
+        const factor = (index + 1) * 6;
+        orb.style.transform = `translate(${pointer.x * factor}px, ${pointer.y * factor}px)`;
+      });
+    });
+
+    window.addEventListener("resize", resizeCanvas);
+    resizeCanvas();
+    animate();
+
+    const form = document.querySelector(".search-bar");
+    const input = document.querySelector(".search-input");
+    const statusEl = document.getElementById("status");
+    const outputEl = document.getElementById("output");
+    const exportPdfBtn = document.getElementById("export-pdf");
+    const exportWordBtn = document.getElementById("export-word");
+    const wordCountEl = document.getElementById("word-count");
+
+    const escapeHtml = (value) =>
+      value
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+
+    const markdownToHtml = (markdown) => {
+      const lines = markdown.split(/\r?\n/);
+      let html = "";
+      let inList = false;
+      const closeList = () => {
+        if (inList) {
+          html += "</ul>";
+          inList = false;
+        }
+      };
+
+      const formatInline = (text) =>
+        text.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+
+      lines.forEach((rawLine) => {
+        const line = rawLine.trim();
+        if (!line) {
+          closeList();
+          return;
+        }
+
+      if (line.startsWith("#### ")) {
+        closeList();
+        html += `<h4>${formatInline(escapeHtml(line.slice(5)))}</h4>`;
+        return;
+      }
+      if (line.startsWith("### ")) {
+        closeList();
+        html += `<h4>${formatInline(escapeHtml(line.slice(4)))}</h4>`;
+        return;
+      }
+        if (line.startsWith("## ")) {
+          closeList();
+          html += `<h3>${formatInline(escapeHtml(line.slice(3)))}</h3>`;
+          return;
+        }
+        if (line.startsWith("# ")) {
+          closeList();
+          html += `<h2>${formatInline(escapeHtml(line.slice(2)))}</h2>`;
+          return;
+        }
+
+        if (line.startsWith("- ") || line.startsWith("* ")) {
+          if (!inList) {
+            html += "<ul>";
+            inList = true;
+          }
+          html += `<li>${formatInline(escapeHtml(line.slice(2)))}</li>`;
+          return;
+        }
+
+        closeList();
+        html += `<p>${formatInline(escapeHtml(line))}</p>`;
+      });
+
+      closeList();
+      return html;
+    };
+
+    const setNotesContent = (value, isEmpty = false) => {
+      outputEl.classList.toggle("empty", isEmpty);
+      if (isEmpty) {
+        outputEl.textContent = value;
+      } else {
+        outputEl.innerHTML = markdownToHtml(value);
+      }
+    };
+
+    const updateWordCount = (text) => {
+      const count = text.trim() ? text.trim().split(/\s+/).length : 0;
+      wordCountEl.textContent = `Words: ${count}`;
+    };
+
+    const toggleExportButtons = (enabled) => {
+      exportPdfBtn.disabled = !enabled;
+      exportWordBtn.disabled = !enabled;
+    };
+
+    exportPdfBtn.addEventListener("click", () => {
+      if (!window.html2pdf) {
+        setStatus("PDF export unavailable.", "error");
+        return;
+      }
+      const wrapper = document.createElement("div");
+      wrapper.style.fontFamily = "Inter, Arial, sans-serif";
+      wrapper.style.color = "#131b2e";
+      wrapper.style.lineHeight = "1.6";
+      wrapper.style.padding = "24px";
+      wrapper.innerHTML = outputEl.innerHTML || "";
+      document.body.appendChild(wrapper);
+      const options = {
+        margin: 12,
+        filename: "unni-ai-notes.pdf",
+        image: { type: "jpeg", quality: 0.95 },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+      };
+      window
+        .html2pdf()
+        .set(options)
+        .from(wrapper)
+        .save()
+        .then(() => {
+          wrapper.remove();
+        })
+        .catch(() => {
+          wrapper.remove();
+          setStatus("PDF export failed.", "error");
+        });
+    });
+
+    exportWordBtn.addEventListener("click", () => {
+      const content = outputEl.innerHTML || "";
+      const html = `<!doctype html><html><head><meta charset="utf-8"><title>Unni AI Notes</title></head><body style="font-family: Inter, Arial, sans-serif; line-height:1.6;">${content}</body></html>`;
+      const blob = new Blob([html], { type: "application/msword" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = "unni-ai-notes.doc";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(link.href);
+    });
+
+    const setStatus = (message, tone = "default") => {
+      statusEl.textContent = message;
+      if (tone === "error") {
+        statusEl.style.color = "#b42318";
+      } else if (tone === "success") {
+        statusEl.style.color = "#146a46";
+      } else {
+        statusEl.style.color = "var(--on-surface)";
+      }
+    };
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const url = input.value.trim();
+      if (!url) {
+        setStatus("Please add a YouTube link.", "error");
+        setNotesContent("Paste a YouTube link and click Generate Notes to create expert notes.", true);
+        return;
+      }
+
+      setStatus("Generating expert notes...");
+      setNotesContent("Working on it...", true);
+      updateWordCount("");
+      toggleExportButtons(false);
+
+      try {
+        const response = await fetch(`/api/analyze?url=${encodeURIComponent(url)}`);
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data?.error || "Failed to fetch transcript.");
+        }
+        if (data?.mistral_error) {
+          setStatus("Notes unavailable.", "error");
+          setNotesContent(data?.notes || data?.mistral_error || "Notes unavailable.", true);
+          updateWordCount("");
+          toggleExportButtons(false);
+        } else {
+          setStatus("Notes ready.", "success");
+          setNotesContent(data?.notes || "Notes unavailable.");
+          updateWordCount(data?.notes || "");
+          toggleExportButtons(Boolean(data?.notes));
+        }
+        document.body.classList.add("results-visible");
+      } catch (err) {
+        setStatus("Could not fetch notes.", "error");
+        setNotesContent(err?.message || "Something went wrong. Try again in a moment.", true);
+        updateWordCount("");
+        toggleExportButtons(false);
+      }
+    });
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" defer></script>
+</body>
+</html>
