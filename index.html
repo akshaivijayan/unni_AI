@@ -591,9 +591,10 @@
       const lines = markdown.split(/\r?\n/);
       let html = "";
       let inList = false;
+      let listType = "ul";
       const closeList = () => {
         if (inList) {
-          html += "</ul>";
+          html += listType === "ol" ? "</ol>" : "</ul>";
           inList = false;
         }
       };
@@ -608,33 +609,29 @@
           return;
         }
 
-      if (line.startsWith("#### ")) {
-        closeList();
-        html += `<h4>${formatInline(escapeHtml(line.slice(5)))}</h4>`;
-        return;
-      }
-      if (line.startsWith("### ")) {
-        closeList();
-        html += `<h4>${formatInline(escapeHtml(line.slice(4)))}</h4>`;
-        return;
-      }
-        if (line.startsWith("## ")) {
+        const headingMatch = line.match(/^(#{1,4})\s*(.+)$/);
+        if (headingMatch) {
           closeList();
-          html += `<h3>${formatInline(escapeHtml(line.slice(3)))}</h3>`;
-          return;
-        }
-        if (line.startsWith("# ")) {
-          closeList();
-          html += `<h2>${formatInline(escapeHtml(line.slice(2)))}</h2>`;
+          const level = headingMatch[1].length;
+          const text = formatInline(escapeHtml(headingMatch[2]));
+          if (level === 1) html += `<h2>${text}</h2>`;
+          else if (level === 2) html += `<h3>${text}</h3>`;
+          else html += `<h4>${text}</h4>`;
           return;
         }
 
-        if (line.startsWith("- ") || line.startsWith("* ")) {
-          if (!inList) {
-            html += "<ul>";
+        const bulletMatch = line.match(/^[-*•]\s+(.*)$/);
+        const orderedMatch = line.match(/^\d+\.\s+(.*)$/);
+        if (bulletMatch || orderedMatch) {
+          const nextType = orderedMatch ? "ol" : "ul";
+          if (!inList || listType !== nextType) {
+            closeList();
+            listType = nextType;
+            html += nextType === "ol" ? "<ol>" : "<ul>";
             inList = true;
           }
-          html += `<li>${formatInline(escapeHtml(line.slice(2)))}</li>`;
+          const text = orderedMatch ? orderedMatch[1] : bulletMatch[1];
+          html += `<li>${formatInline(escapeHtml(text))}</li>`;
           return;
         }
 
