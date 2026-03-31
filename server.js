@@ -61,7 +61,7 @@ const callHuggingFace = async (prompt) => {
   }
 
   const response = await fetch(
-    `https://api-inference.huggingface.co/models/${encodeURIComponent(HF_MODEL)}`,
+    `https://router.huggingface.co/hf-inference/models/${encodeURIComponent(HF_MODEL)}`,
     {
       method: "POST",
       headers: {
