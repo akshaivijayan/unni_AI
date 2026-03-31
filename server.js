@@ -85,13 +85,41 @@ const callMistral = async (messages) => {
   return payload?.choices?.[0]?.message?.content || "";
 };
 
+const objectToNotesMarkdown = (obj, depth = 2) => {
+  if (!obj || typeof obj !== "object") return "";
+  const headingPrefix = "#".repeat(Math.min(depth, 4));
+  let out = "";
+  Object.entries(obj).forEach(([key, value]) => {
+    out += `${headingPrefix} ${key}\n`;
+    if (Array.isArray(value)) {
+      value.forEach((item) => {
+        out += `- ${String(item)}\n`;
+      });
+      out += "\n";
+      return;
+    }
+    if (value && typeof value === "object") {
+      out += "\n";
+      out += objectToNotesMarkdown(value, depth + 1);
+      return;
+    }
+    out += `${String(value)}\n\n`;
+  });
+  return out.trim();
+};
+
 const parseStudyOutput = (content) => {
   const cleaned = content.trim().replace(/^```json/i, "").replace(/^```/i, "").replace(/```$/, "").trim();
   try {
     const parsed = JSON.parse(cleaned);
     const summaryArr = Array.isArray(parsed.summary) ? parsed.summary : [];
     const summary = summaryArr.length ? summaryArr.map((item) => `- ${item}`).join("\n") : "";
-    const notes = typeof parsed.notes === "string" ? parsed.notes.trim() : "";
+    let notes = "";
+    if (typeof parsed.notes === "string") {
+      notes = parsed.notes.trim();
+    } else if (parsed.notes && typeof parsed.notes === "object") {
+      notes = objectToNotesMarkdown(parsed.notes, 2);
+    }
     return { summary, notes };
   } catch (err) {
     const summaryMatch = content.match(/SUMMARY:\s*([\s\S]*?)\nAI_NOTES:/i);
