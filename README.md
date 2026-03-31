@@ -1,6 +1,6 @@
 # Unni AI Notes
 
-Generate expert study notes from any YouTube video. Paste a link, and the app fetches the transcript and asks Qwen (via Hugging Face) to produce clean, structured notes.
+Generate expert study notes from any YouTube video. Paste a link, and the app fetches the transcript and asks Mistral AI to produce clean, structured notes.
 
 ## Features
 - YouTube transcript fetch (English)
@@ -11,7 +11,7 @@ Generate expert study notes from any YouTube video. Paste a link, and the app fe
 ## Tech
 - Node.js (HTTP server)
 - youtube-transcript
-- Hugging Face Inference API (Qwen)
+- Mistral AI (Chat Completions API)
 
 ## Local Setup
 1. Install dependencies
@@ -33,8 +33,8 @@ npm start
 5. Open `http://localhost:3000`
 
 ## Environment Variables
-- `HF_API_KEY` (required)
-- `HF_MODEL` (optional, default `Qwen/Qwen2.5-7B-Instruct`)
+- `MISTRAL_API_KEY` (required)
+- `MISTRAL_MODEL` (optional, default `mistral-small-latest`)
 
 ## Deploy to Render (GitHub)
 1. Push this repo to GitHub.
@@ -46,8 +46,8 @@ Start Command: npm start
 ```
 4. Add environment variables in Render:
 ```text
- HF_API_KEY=your_key_here
- HF_MODEL=Qwen/Qwen2.5-7B-Instruct
+ MISTRAL_API_KEY=your_key_here
+ MISTRAL_MODEL=mistral-small-latest
 ```
 5. Deploy.
 
