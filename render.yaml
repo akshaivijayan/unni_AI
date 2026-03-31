@@ -6,8 +6,8 @@ services:
     buildCommand: npm install
     startCommand: npm start
     envVars:
-      - key: MISTRAL_API_KEY
+      - key: HF_API_KEY
         sync: false
-      - key: MISTRAL_MODEL
-        value: mistral-small-latest
+      - key: HF_MODEL
+        value: Qwen/Qwen2.5-7B-Instruct
     healthCheckPath: /health

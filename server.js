@@ -24,8 +24,8 @@ loadEnv();
 
 const PORT = process.env.PORT || 3000;
 const INDEX_PATH = path.join(__dirname, "index.html");
-const MISTRAL_API_KEY = process.env.MISTRAL_API_KEY;
-const MISTRAL_MODEL = process.env.MISTRAL_MODEL || "mistral-small-latest";
+const HF_API_KEY = process.env.HF_API_KEY;
+const HF_MODEL = process.env.HF_MODEL || "Qwen/Qwen2.5-7B-Instruct";
 
 const getTranscript = async (videoUrl) => {
   const { YoutubeTranscript } = await import(
@@ -53,36 +53,55 @@ const buildStudyPrompt = (transcript) => [
   },
 ];
 
-const callMistral = async (messages) => {
-  if (!MISTRAL_API_KEY) {
-    const err = new Error("Missing MISTRAL_API_KEY on the server.");
+const callHuggingFace = async (prompt) => {
+  if (!HF_API_KEY) {
+    const err = new Error("Missing HF_API_KEY on the server.");
     err.statusCode = 500;
     throw err;
   }
 
-  const response = await fetch("https://api.mistral.ai/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${MISTRAL_API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: MISTRAL_MODEL,
-      messages,
-      temperature: 0.2,
-      max_tokens: 1400,
-    }),
-  });
+  const response = await fetch(
+    `https://api-inference.huggingface.co/models/${encodeURIComponent(HF_MODEL)}`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${HF_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        inputs: prompt,
+        parameters: {
+          temperature: 0.2,
+          max_new_tokens: 1400,
+          return_full_text: false,
+        },
+        options: {
+          wait_for_model: true,
+        },
+      }),
+    }
+  );
 
   if (!response.ok) {
     const text = await response.text();
-    const err = new Error(text || "Mistral API request failed.");
+    const err = new Error(text || "Hugging Face request failed.");
     err.statusCode = response.status;
     throw err;
   }
 
   const payload = await response.json();
-  return payload?.choices?.[0]?.message?.content || "";
+  if (Array.isArray(payload) && payload[0]?.generated_text) {
+    return payload[0].generated_text;
+  }
+  if (payload?.generated_text) {
+    return payload.generated_text;
+  }
+  if (payload?.error) {
+    const err = new Error(payload.error);
+    err.statusCode = 500;
+    throw err;
+  }
+  return "";
 };
 
 const parseStudyOutput = (content) => {
@@ -171,7 +190,10 @@ const server = http.createServer(async (req, res) => {
     try {
       const transcript = await getTranscript(videoUrl);
       try {
-        const content = await callMistral(buildStudyPrompt(transcript));
+        const prompt = buildStudyPrompt(transcript)
+          .map((m) => `${m.role.toUpperCase()}:\n${m.content}`)
+          .join("\n\n");
+        const content = await callHuggingFace(prompt);
         const { summary, notes } = parseStudyOutput(content);
 
         res.writeHead(200, { "Content-Type": "application/json" });
@@ -180,19 +202,19 @@ const server = http.createServer(async (req, res) => {
             transcript,
             summary: summary || "Summary unavailable.",
             notes: notes || content || "Notes unavailable.",
-            model: MISTRAL_MODEL,
+            model: HF_MODEL,
           })
         );
       } catch (err) {
-        const message = err?.message || "Mistral AI request failed.";
+        const message = err?.message || "Hugging Face request failed.";
         res.writeHead(200, { "Content-Type": "application/json" });
         res.end(
           JSON.stringify({
             transcript,
             summary: `Summary unavailable. ${message}`,
             notes: `Notes unavailable. ${message}`,
-            model: MISTRAL_MODEL,
-            mistral_error: message,
+            model: HF_MODEL,
+            llm_error: message,
           })
         );
       }

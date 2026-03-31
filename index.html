@@ -742,9 +742,9 @@
         if (!response.ok) {
           throw new Error(data?.error || "Failed to fetch transcript.");
         }
-        if (data?.mistral_error) {
+        if (data?.llm_error) {
           setStatus("Notes unavailable.", "error");
-          setNotesContent(data?.notes || data?.mistral_error || "Notes unavailable.", true);
+          setNotesContent(data?.notes || data?.llm_error || "Notes unavailable.", true);
           updateWordCount("");
           toggleExportButtons(false);
         } else {
