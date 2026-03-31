@@ -31,7 +31,20 @@ const getTranscript = async (videoUrl) => {
   const { YoutubeTranscript } = await import(
     "./node_modules/youtube-transcript/dist/youtube-transcript.esm.js"
   );
-  const items = await YoutubeTranscript.fetchTranscript(videoUrl, { lang: "en" });
+  let canonicalUrl = videoUrl;
+  try {
+    const parsed = new URL(videoUrl);
+    if (parsed.hostname.includes("youtu.be")) {
+      const id = parsed.pathname.replace("/", "").trim();
+      if (id) canonicalUrl = `https://www.youtube.com/watch?v=${id}`;
+    } else if (parsed.hostname.includes("youtube.com")) {
+      const id = parsed.searchParams.get("v");
+      if (id) canonicalUrl = `https://www.youtube.com/watch?v=${id}`;
+    }
+  } catch (err) {
+    // If URL parsing fails, fall back to the original input.
+  }
+  const items = await YoutubeTranscript.fetchTranscript(canonicalUrl, { lang: "en" });
   return items.map((item) => item.text).join(" ");
 };
 
